@@ -180,6 +180,25 @@ resource "aws_network_acl" "public" {
     to_port    = 0
   }
 
+  # Public web traffic to the internet-facing ALB.
+  ingress {
+    rule_no    = 140
+    protocol   = "tcp"
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 80
+    to_port    = 80
+  }
+
+  ingress {
+    rule_no    = 150
+    protocol   = "tcp"
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 443
+    to_port    = 443
+  }
+
   egress {
     rule_no    = 100
     protocol   = "-1"

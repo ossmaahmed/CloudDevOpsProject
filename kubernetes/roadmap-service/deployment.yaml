@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: roadmap-service
-          image: REPLACE_WITH_ECR_REPOSITORY_URL:roadmap-service
-          imagePullPolicy: Always
+          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:roadmap-service
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: roadmap-service-config

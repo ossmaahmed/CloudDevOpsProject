@@ -27,3 +27,6 @@ output "private_subnet_ids" {
   description = "Private subnet IDs hosting EKS worker nodes."
   value       = module.network.private_subnet_ids
 }
+output "alb_controller_role_arn" {
+  value = module.eks.alb_controller_role_arn
+}

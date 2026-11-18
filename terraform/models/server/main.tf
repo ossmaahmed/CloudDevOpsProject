@@ -99,3 +99,7 @@ resource "aws_instance" "jenkins" {
     ignore_changes = [ami]
   }
 }
+resource "aws_iam_role_policy_attachment" "ecr" {
+  role       = aws_iam_role.ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+}
