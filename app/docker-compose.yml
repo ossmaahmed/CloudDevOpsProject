@@ -1,0 +1,75 @@
+services:
+  mysql:
+    image: mysql:8.4.5
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - db-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10m
+
+  auth-service:
+    build: ./auth-service
+    image: auth-service:latest
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5000:5000"  
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - auth-net
+      - db-net
+
+  roadmap-service:
+    build: ./roadmap-service
+    image: roadmap-service:latest
+    container_name: roadmap-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   
+    networks:
+      - roadmap-net
+
+  frontend:
+    build: ./frontend
+    image: frontend:latest
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:5000
+      ROADMAP_SERVICE_URL: http://roadmap-service:8080
+    ports:
+      - "3005:3000"
+    depends_on:
+      - auth-service
+      - roadmap-service
+    networks:
+      - auth-net
+      - roadmap-net
+
+networks:
+  auth-net:
+  roadmap-net:
+  db-net:
+
+volumes:
+  mysql-data:
