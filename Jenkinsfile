@@ -11,8 +11,6 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
-   
-
     environment {
         AWS_REGION      = 'us-east-1'
         REGISTRY        = '908124814208.dkr.ecr.us-east-1.amazonaws.com'
@@ -23,112 +21,112 @@ pipeline {
     }
 
     stages {
-        // Runs on a manual build, or when polling sees changes under app/.
-        // The manifest commit made by this pipeline only touches kubernetes/, so it cannot start a build loop.
-        stage('Pipeline') {
+        stage('Build Image') {
             when {
                 anyOf {
                     changeset 'app/**'
                     not { triggeredBy 'SCMTrigger' }
                 }
             }
-            stages {
-                stage('Build App') {
-                    stages {
-                        stage('Unit Test') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        unitTest(dir: "app/${svc}")
-                                    }
-                                }
-                            }
-                        }
-                        stage('Build App') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        buildApp(dir: "app/${svc}")
-                                    }
-                                }
-                            }
+            steps {
+                script {
+                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                        buildImage(
+                            image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}",
+                            context: "app/${svc}"
+                        )
+                    }
+                }
+            }
+        }
+        stage('Scan Image') {
+            when {
+                anyOf {
+                    changeset 'app/**'
+                    not { triggeredBy 'SCMTrigger' }
+                }
+            }
+            steps {
+                script {
+                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                        scanImage(
+                            image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}",
+                            failOnCritical: false
+                        )
+                    }
+                }
+            }
+        }
+        stage('Push Image') {
+            when {
+                anyOf {
+                    changeset 'app/**'
+                    not { triggeredBy 'SCMTrigger' }
+                }
+            }
+            steps {
+                script {
+                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                        retry(3) {
+                            pushImage(
+                                image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}",
+                                registry: env.REGISTRY,
+                                region: env.AWS_REGION
+                            )
                         }
                     }
                 }
-
-                stage('Build Image') {
-                    stages {
-                        stage('Build Image') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        buildImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}", context: "app/${svc}")
-                                    }
-                                }
-                            }
-                        }
-                        stage('Scan Image') {
-                            steps {
-                                withEnv([
-                                    "TMPDIR=${env.WORKSPACE}/.trivy-tmp",
-                                    "TRIVY_TEMP_DIR=${env.WORKSPACE}/.trivy-tmp",
-                                    "TRIVY_CACHE_DIR=${env.HOME}/.cache/trivy"
-                                ]) {
-                                    sh "mkdir -p '${env.WORKSPACE}/.trivy-tmp' '${env.HOME}/.cache/trivy'"
-                                    script {
-                                        ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                            scanImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}", failOnCritical: false)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        stage('Push Image') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        retry(3) {
-                                            pushImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}",
-                                                      registry: env.REGISTRY, region: env.AWS_REGION)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        stage('Delete Image Locally') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        deleteImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}")
-                                    }
-                                }
-                            }
-                        }
+            }
+        }
+        stage('Delete Image Locally') {
+            when {
+                anyOf {
+                    changeset 'app/**'
+                    not { triggeredBy 'SCMTrigger' }
+                }
+            }
+            steps {
+                script {
+                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                        deleteImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}")
                     }
                 }
-
-                stage('Update Manifests') {
-                    stages {
-                        stage('Update Image Tags') {
-                            steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        updateManifests(file: "kubernetes/${svc}/deployment.yaml", service: svc, tag: env.BUILD_NUMBER)
-                                    }
-                                }
-                            }
-                        }
-                        stage('Push Manifests') {
-                            steps {
-                                pushManifests(file: 'kubernetes/auth-service/deployment.yaml kubernetes/frontend/deployment.yaml kubernetes/roadmap-service/deployment.yaml',
-                                              message: "ci: update images to build ${env.BUILD_NUMBER}",
-                                              repoUrl: env.GIT_REPO_URL,
-                                              branch: env.GIT_BRANCH_NAME,
-                                              credentialsId: env.GIT_CREDENTIALS)
-                            }
-                        }
+            }
+        }
+        stage('Update Manifests') {
+            when {
+                anyOf {
+                    changeset 'app/**'
+                    not { triggeredBy 'SCMTrigger' }
+                }
+            }
+            steps {
+                script {
+                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                        updateManifests(
+                            file: "kubernetes/${svc}/deployment.yaml",
+                            service: svc,
+                            tag: env.BUILD_NUMBER
+                        )
                     }
                 }
+            }
+        }
+        stage('Push Manifests') {
+            when {
+                anyOf {
+                    changeset 'app/**'
+                    not { triggeredBy 'SCMTrigger' }
+                }
+            }
+            steps {
+                pushManifests(
+                    file: 'kubernetes/auth-service/deployment.yaml kubernetes/frontend/deployment.yaml kubernetes/roadmap-service/deployment.yaml',
+                    message: "ci: update images to build ${env.BUILD_NUMBER}",
+                    repoUrl: env.GIT_REPO_URL,
+                    branch: env.GIT_BRANCH_NAME,
+                    credentialsId: env.GIT_CREDENTIALS
+                )
             }
         }
     }

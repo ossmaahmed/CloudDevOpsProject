@@ -33,9 +33,9 @@ module "eks" {
   subnet_ids          = module.network.private_subnet_ids
   public_access_cidrs = [var.jenkins_access_cidr]
   node_instance_type  = var.eks_node_instance_type
-  desired_node_count  = 2
+  desired_node_count  = 3
   min_node_count      = 2
-  max_node_count      = 2
+  max_node_count      = 3
 }
 
 module "ecr" {
