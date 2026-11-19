@@ -69,9 +69,16 @@ pipeline {
                         }
                         stage('Scan Image') {
                             steps {
-                                script {
-                                    ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
-                                        scanImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}", failOnCritical: false)
+                                withEnv([
+                                    "TMPDIR=${env.WORKSPACE}/.trivy-tmp",
+                                    "TRIVY_TEMP_DIR=${env.WORKSPACE}/.trivy-tmp",
+                                    "TRIVY_CACHE_DIR=${env.HOME}/.cache/trivy"
+                                ]) {
+                                    sh "mkdir -p '${env.WORKSPACE}/.trivy-tmp' '${env.HOME}/.cache/trivy'"
+                                    script {
+                                        ['auth-service', 'frontend', 'roadmap-service'].each { svc ->
+                                            scanImage(image: "${REGISTRY}/${REPOSITORY}:${svc}-${BUILD_NUMBER}", failOnCritical: false)
+                                        }
                                     }
                                 }
                             }
