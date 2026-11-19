@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: roadmap-service
-          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:roadmap-service-4
+          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:roadmap-service-5
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
