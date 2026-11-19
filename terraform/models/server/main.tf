@@ -74,6 +74,12 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# Lets the Jenkins pipelines log in to ECR and push images without static credentials.
+resource "aws_iam_role_policy_attachment" "ecr" {
+  role       = aws_iam_role.ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+}
+
 resource "aws_iam_instance_profile" "ssm" {
   name = "${var.name}-instance-profile"
   role = aws_iam_role.ssm.name
@@ -88,6 +94,11 @@ resource "aws_instance" "jenkins" {
   key_name                    = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.ssm.name
 
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
   tags = {
     Name         = var.name
     AnsibleGroup = "jenkins"
@@ -98,8 +109,4 @@ resource "aws_instance" "jenkins" {
   lifecycle {
     ignore_changes = [ami]
   }
-}
-resource "aws_iam_role_policy_attachment" "ecr" {
-  role       = aws_iam_role.ssm.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }

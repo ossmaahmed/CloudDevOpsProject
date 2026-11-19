@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ivolve
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ossmaahmed/CloudDevOpsProject.git
+    targetRevision: main
+    path: kubernetes
+    directory:
+      recurse: true
+      # Real secrets are created with kubectl, so the placeholder files in Git must never be synced.
+      exclude: '{auth-service/secret.yaml,frontend/secret.yaml,mysql/secret.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ivolve
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
