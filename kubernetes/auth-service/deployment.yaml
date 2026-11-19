@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:auth-service-4
+          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:auth-service-5
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
