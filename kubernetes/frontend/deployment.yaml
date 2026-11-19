@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:frontend
+          image: 908124814208.dkr.ecr.us-east-1.amazonaws.com/ivolve-app:frontend-4
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
