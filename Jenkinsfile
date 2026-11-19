@@ -11,9 +11,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
-    triggers {
-        pollSCM('H/2 * * * *')
-    }
+   
 
     environment {
         AWS_REGION      = 'us-east-1'
